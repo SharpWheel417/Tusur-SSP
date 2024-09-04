@@ -1,0 +1,14 @@
+{
+  "files.associations": {
+    "*.embeddedhtml": "html",
+    ".env.*": "dotenv",
+    ".prettierrc": "json",
+    "*.css": "css",
+    "*.js": "javascript",
+    "xlocinfo": "cpp",
+    "xstring": "cpp",
+    "iostream": "cpp",
+    "thread": "cpp",
+    "iosfwd": "cpp"
+  }
+}
