@@ -7,115 +7,69 @@
 #include <string>
 #include <vector>
 #include <sstream>
+#include <Windows.h>
+#include <SetupAPI.h>
+#include <cfgmgr32.h>
+#include <devguid.h> // GUID_DEVCLASS_BLUETOOTH
 
+#pragma comment(lib, "Setupapi.lib")
+
+
+// Sleep
+#include "windows.h"
+#include <setupapi.h>
+#pragma comment(lib, "setupapi.lib")
 
 using namespace std;
 
+/// @brief Включает и выключает введенный интерфейс
+/// @param adapterName Название интерфейса
+/// @param enable 1 - enable, 0 - disable
+void controllerNetworkAdapter(const string& adapterName, bool enable) {
+    string command;
+    int result;
 
-
-
-
-string executeCommand(const string& command) {
-    FILE* pipe = popen(command.c_str(), "r");
-    if (!pipe) {
-        return "РћС€РёР±РєР° РїСЂРё РІС‹РїРѕР»РЅРµРЅРёРё РєРѕРјР°РЅРґС‹";
+    if (enable){
+        command = "netsh interface set interface \"" + adapterName + "\" enable";
+    } else{
+    command = "netsh interface set interface \"" + adapterName + "\" disable";
     }
-
-    string output;
-    char buffer[255];
-
-    while (fgets(buffer, 255, pipe) != NULL) {
-        output += buffer;
-    }
-
-    pclose(pipe);
-    return output;
-}
-
-
-vector<string> executeInterfaceName(const string& str) {
-    istringstream iss(str);
-    string line;
-
-    vector<string> list;
-
-    // РџСЂРѕРїСѓСЃРєР°РµРј РїРµСЂРІС‹Рµ РґРІРµ СЃС‚СЂРѕРєРё
-    getline(iss, line);
-    getline(iss, line);
-
-    while (getline(iss, line)) {
-        // Р Р°Р·РґРµР»СЏРµРј СЃС‚СЂРѕРєСѓ РЅР° С‡Р°СЃС‚Рё РїРѕ РїСЂРѕР±РµР»Р°Рј
-        istringstream lineIss(line);
-        string part;
-
-        // РџСЂРѕРїСѓСЃРєР°РµРј РїРµСЂРІС‹Рµ С‚СЂРё С‡Р°СЃС‚Рё
-        for (int i = 0; i < 3; i++) {
-            getline(lineIss, part, ' ');
-        }
-
-        // Р’С‹РІРѕРґРёРј С‡РµС‚РІРµСЂС‚СѓСЋ С‡Р°СЃС‚СЊ (Interface Name)
-        getline(lineIss, part);
-        list.push_back(part);
-    }
-
-    return list;
-}
-
-
-void disableNetworkAdapter(const string& adapterName) {
-    string command = "netsh interface set interface \"" + adapterName + "\" admin=disable";
-    int result = system(command.c_str());
+    result = system(command.c_str());
     if (result != 0) {
-        cerr << "РћС€РёР±РєР° РїСЂРё РѕС‚РєР»СЋС‡РµРЅРёРё Р°РґР°РїС‚РµСЂР°: " << adapterName << endl;
-        cerr << "РћС€РёР±РєР°: " << result << endl;
+        cerr << "Ошибка включения/выключения интерфейса: " << adapterName << endl;
+        cerr << "Ошибка: " << result << endl;
     }
 }
+
+void DisableBluetooth() {
+    // Отключить Bluetooth через PowerShell
+    system("powershell -Command \"Get-PnpDevice -FriendlyName Bluetooth | Enable-PnpDevice -Confirm:$false\"");
+    cout << "Bluetooth отключен." << endl;
+
+    // Ждать 3 секунды
+    this_thread::sleep_for(chrono::seconds(3));
+
+    // Включить Bluetooth через PowerShell
+    system("powershell -Command \"Get-Device -Class Bluetooth | Enable-PnpDevice -Confirm:$false\"");
+    cout << "Bluetooth включен." << endl;
+}
+
+
 
 int main() {
-    string command = "netsh interface show interface"; // РїСЂРёРјРµСЂ РєРѕРјР°РЅРґС‹
-    string output = executeCommand(command);
-    vector<string> interfaceNames = executeInterfaceName(output);
-    for (auto &&interface : interfaceNames)
-    {
-        disableNetworkAdapter(interface);
-    }
 
-    cout << output << endl;
+    // выключаем Wi-Fi
+    controllerNetworkAdapter("Беспроводная сеть", 0);
+    controllerNetworkAdapter("Ethernet", 0);
+    Sleep(3000);
+    controllerNetworkAdapter("Беспроводная сеть", 1);
+    controllerNetworkAdapter("Ethernet", 1);
+
+
+    DisableBluetooth();
+
+    // cout << output << endl;
+    while(1){
+    }
     return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-void enableNetworkAdapter(const string& adapterName) {
-    string command = "netsh interface set interface \"" + adapterName + "\" admin=enable";
-    int result = system(command.c_str());
-    if (result != 0) {
-        cerr << "Error enabling adapter: " << adapterName << " (return code: " << result << ")" << endl;
-    }
-}
-
-// int main() {
-//     // Disable adapters
-//     disableNetworkAdapter("Р‘РµСЃРїСЂРѕРІРѕРґРЅР°СЏ СЃРµС‚СЊ");
-//     disableNetworkAdapter("Wi-Fi");
-//     disableNetworkAdapter("Bluetooth Network Connection");
-
-//     cout << "Network adapters have been disabled." << endl;
-
-//     this_thread::sleep_for(chrono::seconds(3));
-
-//     // Enable adapters
-//     enableNetworkAdapter("Ethernet");
-//     enableNetworkAdapter("Wi-Fi");
-//     enableNetworkAdapter("Bluetooth Network Connection");
-
-//     return 0;
-// }
